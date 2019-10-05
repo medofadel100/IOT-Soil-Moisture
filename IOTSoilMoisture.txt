@@ -1,0 +1,50 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <ESP8266HTTPClient.h>
+
+ESP8266WiFiMulti WiFiMulti;
+String _deviceName = "PlantManager";
+
+void setup() {
+  pinMode(A0, INPUT);
+  Serial.begin(115200);
+  _deviceName += String(ESP.getChipId());
+  delay(4000);
+  Serial.println("");
+  WiFi.hostname(_deviceName);
+  WiFiMulti.addAP("SSID", "PASS");
+  WiFiMulti.addAP("SSID", "PASS");
+  Serial.println(_deviceName + " active");
+}
+
+void loop() {
+  if ((WiFiMulti.run() == WL_CONNECTED))
+  {
+    Serial.print(WiFi.SSID() + " ");
+
+    HTTPClient httpClient;
+    int ADC = analogRead(A0);
+    float voltage = ADC;
+    voltage = voltage * (0.924 / 1024.0);
+    voltage = voltage * 1000;
+
+    String payload = "?ADC=" + String( ADC);
+    payload += "&RSSI=" + String(WiFi.RSSI()) ;
+    payload += "&V=" + String(voltage) ;
+
+    httpClient.begin("dweet.io", 80, String("/dweet/for/" + _deviceName + payload) ); //HTTP
+    int httpCode = httpClient.POST("");
+    Serial.print(String(httpCode) + " POST " + payload);
+    httpClient.end();
+
+    Serial.println(" Sleep");
+    ESP.deepSleep(60000000, WAKE_RFCAL);
+    delay(1000);
+  }
+  else
+  {
+    Serial.println("Connecting to network..");
+    Serial.println(analogRead(A0));
+  }
+  delay(1000);
+}
